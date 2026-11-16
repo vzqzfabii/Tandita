@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Tanda</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--bg:#edf1f2;--card:#fff;--ink:#14212b;--mut:#62737e;--line:#d9e1e4;--hero:#0f4f44;--herotx:#f2fbf8;--gold:#f0b429;
+--ok:#12795f;--oksoft:#d8f1e8;--warn:#9a6700;--warnsoft:#fdeebc;--bad:#b4322f;--badsoft:#fadcda;--idle:#4b5d69;--idlesoft:#e3e9ec}
+@media(prefers-color-scheme:dark){:root{--bg:#0f171c;--card:#172229;--ink:#e6eef1;--mut:#92a5af;--line:#27373f;--hero:#0c3d35;--oksoft:#16392f;--ok:#4fd1a5;--warn:#f0c15a;--warnsoft:#3b3012;--bad:#f08a86;--badsoft:#3d1f1e;--idle:#a9bac3;--idlesoft:#223038}}
+*{box-sizing:border-box}
+body{margin:0;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);background:var(--bg);color:var(--ink);font:400 15px/1.45 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:820px;margin:0 auto;padding:14px 14px 80px}
+.note{background:var(--warnsoft);color:var(--warn);border-radius:10px;padding:8px 12px;font-size:13px;margin-bottom:12px}
+h1{font-size:26px;margin:4px 0 2px;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--mut);margin:0 0 12px;font-size:14px}
+.seg{display:flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:3px 3px 3px 12px;margin-bottom:12px}
+.seg:empty{display:none}.seg span{flex:1;font-size:14px;font-weight:700}
+.tabs{display:flex;gap:6px;overflow-x:auto;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tab{background:none;border:0;border-bottom:3px solid transparent;padding:9px 10px;font:inherit;color:var(--mut);cursor:pointer;white-space:nowrap}
+.tab.on{color:var(--ink);border-color:var(--gold);font-weight:700}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.nav b{font-size:17px}.nav small{display:block;color:var(--mut);font-weight:400;font-size:13px}.nav div{text-align:center}
+.ib{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;width:40px;height:40px;font-size:18px;cursor:pointer}
+.ib:disabled{opacity:.35;cursor:default}
+.hero{background:var(--hero);color:var(--herotx);border-radius:16px;padding:16px 16px 14px;margin-bottom:14px}
+.hero .who{font-size:13px;opacity:.8}.hero .big{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin:2px 0 10px}
+.hero .stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px}.hero .stats span{font-size:12px;opacity:.75;display:block}.hero .stats b{font-size:19px}
+.bar{height:10px;border-radius:6px;background:rgba(255,255,255,.18);overflow:hidden}.bar i{display:block;height:100%;background:var(--gold);border-radius:6px}
+.deliv{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:14px}.deliv input{width:18px;height:18px;accent-color:var(--gold)}
+.ledger{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:6px}
+.row{padding:12px 14px;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:0}
+.rtop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.rr{text-align:right;flex-shrink:0}.mut{color:var(--mut);font-size:13px}
+.chips{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.chip{border:1px solid var(--line);border-radius:6px;padding:0 6px;font-size:12px;color:var(--mut)}
+.chip.rc{background:var(--gold);border-color:var(--gold);color:#3a2a00;font-weight:700}
+.badge{display:inline-block;border-radius:20px;padding:2px 10px;font-size:12.5px;font-weight:700}
+.badge.ok{background:var(--oksoft);color:var(--ok)}.badge.part{background:var(--warnsoft);color:var(--warn)}
+.badge.late{background:var(--badsoft);color:var(--bad)}.badge.pend,.badge.recibe{background:var(--idlesoft);color:var(--idle)}
+.pl{font-size:13px;color:var(--mut);margin-top:6px}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.btn{border:1px solid var(--ok);background:var(--ok);color:#fff;border-radius:9px;padding:7px 11px;font:inherit;font-size:13.5px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}.btn.bad{background:var(--bad);border-color:var(--bad)}
+.lnk{background:none;border:0;color:var(--mut);text-decoration:underline;font:inherit;font-size:13px;cursor:pointer;padding:7px 4px}
+.out{background:none;border:1px solid var(--line);border-radius:9px;color:var(--ink);font:inherit;font-size:14px;padding:7px 14px;cursor:pointer}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.form{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+input,select,textarea{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:9px;padding:7px 9px}
+input[type=number]{width:100px}
+.sec{margin:18px 2px 8px;font-size:16px;font-weight:700}
+textarea{width:100%;min-height:92px;resize:vertical}
+.tr{display:grid;grid-template-columns:70px 1fr auto;gap:8px;align-items:center}
+.warnb{background:var(--badsoft);color:var(--bad);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:14px}
+.grid12{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;padding:12px 14px}
+.grid12 label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--mut)}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:var(--card);padding-left:12px;font-weight:500}
+td.cur,th.cur{background:var(--warnsoft)}.s-ok{color:var(--ok)}.s-part{color:var(--warn)}.s-late{color:var(--bad);font-weight:700}.s-pend{color:var(--mut)}
+.mine{background:var(--warnsoft)}.me-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+.me-card h3{margin:0 0 6px;font-size:17px}.me-card p{margin:4px 0}
+.ro .adm{display:none}.vo{display:none}.ro .vo{display:inline}
+.foot{text-align:center;margin-top:28px}body:not(.ro) .foot{display:none}
+.adm-btn{background:none;border:0;opacity:.25;font-size:16px;cursor:pointer;padding:10px}.adm-btn:hover,.adm-btn:focus-visible{opacity:.85}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}.modal[hidden]{display:none}
+.mbox{background:var(--card);border-radius:14px;padding:18px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:8px}.mbox h3{margin:0}.mbox input{width:100%}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:24px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90%}
+.toast.on{opacity:1}
+</style>
+</head>
+<body class="ro">
+<div class="wrap">
+  <div class="note" id="note"></div>
+  <h1 id="ttl">Tanda semanal</h1>
+  <p class="sub" id="sub"></p>
+  <div class="seg" id="seg"></div>
+  <div class="tabs" id="tabs"></div>
+  <div id="view"><p class="sub">Cargando…</p></div>
+  <div class="foot"><button class="adm-btn" onclick="openLogin()" aria-label="Acceso de administrador">🔒</button></div>
+</div>
+<div class="modal" id="login" hidden><div class="mbox" role="dialog" aria-label="Acceso de administrador"><h3>Acceso de administrador</h3>
+  <input type="text" id="lem" placeholder="Correo" autocomplete="username" aria-label="Correo">
+  <input type="password" id="lpw" placeholder="Contraseña" autocomplete="current-password" aria-label="Contraseña" onkeydown="if(event.key==='Enter')doLogin()">
+  <div class="acts"><button class="btn" onclick="doLogin()">Entrar</button><button class="btn ghost" onclick="closeLogin()">Cancelar</button></div></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const SB_URL="https://veppjocvhzhtsfjagqcg.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZlcHBqb2N2aHpodHNmamFncWNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1OTM4OTcsImV4cCI6MjEwNzE2OTg5N30.lFQ-IsHvGFSvPv6tCLTPslPLWQ6TeGSFoJSMrrGp7OE";
+const sb=supabase.createClient(SB_URL,SB_KEY);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=n=>"$"+Number(n).toLocaleString("es-MX");
+const D=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
+const iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+const plus=(s,n)=>{const d=D(s);d.setDate(d.getDate()+n);return iso(d)};
+const fd=s=>D(s).toLocaleDateString("es-MX",{day:"numeric",month:"short"});
+const fdl=s=>D(s).toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month:"long"});
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+
+let S={cfg:{nombre:"Tanda semanal",monto_por_numero:300,total_numeros:12,fecha_inicio:null},P:[],nums:[],turnos:[],pagos:[],admins:[]};
+let me=null,tab="cobros",wk=0,cur=1,form=null,yo=0;
+try{yo=+localStorage.getItem("tanda_yo")||0}catch(e){}
+const RO=()=>!me,isOwner=()=>me&&me.rol==="dueno";
+const act=()=>S.P.filter(p=>p.activo),pById=id=>S.P.find(p=>p.id===id);
+const turno=w=>S.turnos.find(t=>t.semana===w),recvNum=w=>turno(w)?.numero;
+const ownerOf=n=>S.nums.find(x=>x.numero===n)?.participante_id;
+const myNums=pid=>S.nums.filter(x=>x.participante_id===pid).map(x=>x.numero);
+const COST=()=>S.cfg.monto_por_numero,NW=()=>S.cfg.total_numeros;
+const due=(w,pid)=>{const rn=recvNum(w);if(!rn)return 0;return COST()*Math.max(0,myNums(pid).length-(ownerOf(rn)===pid?1:0))};
+const pagosDe=(w,pid)=>S.pagos.filter(x=>x.semana===w&&x.participante_id===pid);
+const paid=(w,pid)=>pagosDe(w,pid).reduce((a,x)=>a+x.monto,0);
+const quien=email=>S.admins.find(a=>a.email===email)?.nombre||"administrador";
+function status(w,pid){
+  const t=turno(w);if(!t)return{k:"pend",t:"Pendiente"};
+  const d=due(w,pid),p=paid(w,pid);
+  if(!d)return{k:"recibe",t:"Recibe la bolsa"};
+  if(p>=d)return{k:"ok",t:"Pagado"};
+  const late=iso(new Date())>=plus(t.fecha,2);
+  if(p>0)return late?{k:"late",t:"Abono, atrasado"}:{k:"part",t:"Abonó"};
+  return late?{k:"late",t:"Atrasado"}:{k:"pend",t:"Pendiente"};
+}
+function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(toast.h);toast.h=setTimeout(()=>e.classList.remove("on"),2400)}
+async function run(p,msg){const{error}=await p;if(error){toast("Error: "+error.message);return false}await load();if(msg)toast(msg);return true}
+
+async function load(){
+  const adm=!!me;
+  const q=[
+    sb.from("tanda_config").select("*").eq("id",1).maybeSingle(),
+    sb.from("tanda_participantes").select(adm?"id,nombre,telefono,activo":"id,nombre,activo").order("id"),
+    sb.from("tanda_numeros").select("numero,participante_id").order("numero"),
+    sb.from("tanda_turnos").select("semana,numero,fecha,bolsa_entregada").order("semana"),
+    sb.from("tanda_pagos").select(adm?"id,semana,participante_id,monto,metodo,es_abono,fecha_pago,creado_por":"id,semana,participante_id,monto,fecha_pago").eq("anulado",false).order("id")
+  ];
+  if(adm)q.push(sb.from("tanda_admins").select("email,nombre,rol,activo").order("rol"));
+  const r=await Promise.all(q),bad=r.find(x=>x.error);
+  if(bad){$("#view").innerHTML=`<div class="warnb">No se pudo cargar la información: ${esc(bad.error.message)}</div>`;return}
+  S.cfg=r[0].data||S.cfg;S.P=r[1].data;S.nums=r[2].data;S.turnos=r[3].data;S.pagos=r[4].data;S.admins=r[5]?.data||[];
+  const t=iso(new Date());cur=1;S.turnos.forEach(x=>{if(x.fecha<=t)cur=x.semana});
+  if(!wk||wk>NW())wk=cur;
+  render();
+}
+async function checkAdmin(){
+  const{data:{session}}=await sb.auth.getSession();me=null;
+  if(session){
+    const{data}=await sb.from("tanda_admins").select("email,nombre,rol,activo").eq("email",(session.user.email||"").toLowerCase()).maybeSingle();
+    if(data&&data.activo)me=data;else{await sb.auth.signOut();toast("Esa cuenta no tiene permiso de administrador")}
+  }
+  tab="cobros";form=null;await load();
+}
+function openLogin(){$("#login").hidden=false;$("#lem").focus()}
+function closeLogin(){$("#login").hidden=true}
+async function doLogin(){
+  const email=$("#lem").value.trim().toLowerCase(),password=$("#lpw").value;
+  if(!email||!password){toast("Escribe tu correo y contraseña");return}
+  const{error}=await sb.auth.signInWithPassword({email,password});
+  if(error){toast("Correo o contraseña incorrectos");return}
+  $("#lpw").value="";closeLogin();await checkAdmin();
+}
+async function salir(){await sb.auth.signOut();me=null;tab="cobros";form=null;await load()}
+
+const numChips=(pid,w)=>{const rn=recvNum(w);return myNums(pid).map(n=>`<span class="chip ${n===rn?"rc":""}">#${n}</span>`).join("")||'<span class="mut">Sin números</span>'};
+function setTab(t){tab=t;form=null;render()}
+function setWk(w){wk=Math.min(NW(),Math.max(1,w));form=null;render()}
+function setYo(v){yo=+v;try{localStorage.setItem("tanda_yo",String(yo))}catch(e){}render()}
+
+function vCobros(){
+  const w=wk,t=turno(w);
+  const nav=`<div class="nav"><button class="ib" aria-label="Semana anterior" onclick="setWk(${w-1})" ${w<=1?"disabled":""}>‹</button>
+    <div><b>Semana ${w} de ${NW()}${w===cur?" (actual)":""}</b><small>${t?`Domingo ${fd(t.fecha)}, límite lunes ${fd(plus(t.fecha,1))}`:"Sin fecha"}</small></div>
+    <button class="ib" aria-label="Semana siguiente" onclick="setWk(${w+1})" ${w>=NW()?"disabled":""}>›</button></div>`;
+  if(!t)return nav+`<div class="ledger"><div class="row mut">${RO()?"Esta semana todavía no tiene turno asignado.":"Asigna esta semana en la pestaña Turnos."}</div></div>`;
+  const rn=t.numero,rp=pById(ownerOf(rn))||{nombre:"Sin asignar"};
+  const rows=act().map(p=>({p,d:due(w,p.id),pd:paid(w,p.id)}));
+  const tot=rows.reduce((a,x)=>a+x.d,0),got=rows.reduce((a,x)=>a+Math.min(x.pd,x.d),0);
+  const pct=tot?Math.round(got/tot*100):0,pend=rows.filter(x=>x.d>0&&x.pd<x.d);
+  const ledger=rows.map(({p,d,pd})=>{
+    const s=status(w,p.id),left=Math.max(d-pd,0),ps=pagosDe(w,p.id),mi=RO()&&p.id===yo;
+    return `<div class="row ${mi?"mine":""}"><div class="rtop"><div><b>${esc(p.nombre)}${mi?" (tú)":""}</b><div class="chips">${numChips(p.id,w)}</div></div>
+      <div class="rr"><span class="badge ${s.k}">${s.t}</span><div class="mut">${!d?"No aporta":RO()&&!mi?"Aporta "+fmt(d):fmt(pd)+" de "+fmt(d)}</div></div></div>
+      ${ps.length&&(!RO()||mi)?`<div class="pl">${ps.map(x=>(x.metodo?cap(x.metodo)+" ":"")+fmt(x.monto)+" ("+fd(x.fecha_pago)+(x.creado_por?", "+esc(quien(x.creado_por)):"")+")").join("; ")} <button class="lnk adm" onclick="deshacer(${p.id})">Deshacer último</button></div>`:""}
+      ${left?`<div class="acts adm"><button class="btn" onclick="pagar(${p.id},'efectivo',${left},false)">Pagó ${fmt(left)} en efectivo</button><button class="btn" onclick="pagar(${p.id},'transferencia',${left},false)">Pagó ${fmt(left)} por transferencia</button><button class="btn ghost" onclick="openF(${p.id})">Registrar abono</button></div>`:""}
+      ${form===p.id?`<div class="form adm"><input type="number" id="amt" min="1" max="${left}" value="${Math.min(left,100)}" aria-label="Monto"><select id="met"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select><button class="btn" onclick="saveF(${p.id},${left})">Guardar abono</button></div>`:""}
+    </div>`}).join("");
+  const msg=`Recordatorio de la tanda, semana ${w} de ${NW()}. Pago el ${fdl(t.fecha)}, con plazo hasta el lunes ${fd(plus(t.fecha,1))}.\nFalta por pagar: ${pend.map(x=>x.p.nombre+" "+fmt(x.d-x.pd)).join(", ")||"nadie, todo al corriente"}.\nRecibe la bolsa: ${rp.nombre} (número ${rn}).`;
+  return nav+`<div class="hero"><div class="who">Esta semana recibe, con el número ${rn}</div><div class="big">${esc(rp.nombre)}</div>
+    <div class="bar"><i style="width:${pct}%"></i></div>
+    <div class="stats"><div><span>Bolsa</span><b>${fmt(tot)}</b></div><div><span>Cobrado</span><b>${fmt(got)}</b></div><div><span>Falta</span><b>${fmt(tot-got)}</b></div><div><span>Por pagar</span><b>${pend.length} personas</b></div></div>
+    <label class="deliv"><input type="checkbox" ${t.bolsa_entregada?"checked":""} ${RO()?"disabled":""} onchange="entregada(${w},this.checked)">${RO()?(t.bolsa_entregada?"Bolsa ya entregada":"Bolsa aún no entregada"):"Bolsa entregada a "+esc(rp.nombre)}</label></div>
+    ${RO()?meCard():""}<div class="ledger">${ledger}</div>
+    <div class="sec adm">Recordatorio para el grupo</div><textarea class="adm" id="msg" readonly>${esc(msg)}</textarea>
+    <div class="acts adm"><button class="btn" onclick="copyMsg()">Copiar mensaje</button></div>`;
+}
+function meCard(){
+  if(!yo||!pById(yo))return "";
+  const p=pById(yo),s=status(wk,yo),falta=Math.max(0,due(wk,yo)-paid(wk,yo));
+  const mine=myNums(yo).map(n=>{const t=S.turnos.find(x=>x.numero===n);return t?`número ${n}: semana ${t.semana}, ${fdl(t.fecha)}`:`número ${n}: turno por definir`});
+  let tot=0,debt=0;S.turnos.forEach(t=>{if(t.semana<=cur){tot+=paid(t.semana,yo);debt+=Math.max(0,due(t.semana,yo)-paid(t.semana,yo))}});
+  return `<div class="me-card"><h3>Tu cuenta, ${esc(p.nombre)}</h3><p>Esta semana: <span class="badge ${s.k}">${s.t}</span> ${falta?"faltan "+fmt(falta):""}</p>
+    <p>Cuándo recibes: ${mine.join("; ")||"aún no tienes números"}.</p>
+    <p class="mut">Has aportado ${fmt(tot)} en total${debt?" y tienes "+fmt(debt)+" pendientes":", estás al corriente"}.</p></div>`;
+}
+function vTurnos(){
+  const used={};S.turnos.forEach(t=>used[t.numero]=t.semana);
+  const nums=Array.from({length:NW()},(_,k)=>k+1);
+  const head=RO()?"":`<div class="ledger"><div class="row"><b>Fecha del primer domingo</b><div class="form"><input type="date" id="ini" value="${S.cfg.fecha_inicio||""}" aria-label="Primer domingo"><button class="btn" onclick="guardarInicio()">Guardar</button><button class="btn ghost" onclick="ajustarFechas()">Recalcular fechas de todas las semanas</button></div></div></div>`;
+  const rows=Array.from({length:NW()},(_,i)=>i+1).map(w=>{const t=turno(w),n=t?.numero,o=n?pById(ownerOf(n)):null;
+    const tag=t?.bolsa_entregada?"Entregada":w===cur?"Esta semana":t&&w<cur?"Pasada":t?"Próxima":"Sin turno";
+    return `<div class="row tr ${RO()&&n&&ownerOf(n)===yo?"mine":""}"><div><b>Sem. ${w}</b><div class="mut">${t?fd(t.fecha):""}</div></div>
+      <div>${RO()?`<b>${n?"Número "+n:"Por definir"}</b>`:`<select onchange="setTurno(${w},this.value)" aria-label="Número de la semana ${w}"><option value="">Elegir número</option>${nums.map(x=>`<option value="${x}" ${x===n?"selected":""} ${used[x]&&used[x]!==w?"disabled":""}>Número ${x}${used[x]&&used[x]!==w?" (sem. "+used[x]+")":""}</option>`).join("")}</select>
+      ${t?`<input type="date" value="${t.fecha}" onchange="setFecha(${w},this.value)" aria-label="Fecha de la semana ${w}">`:""}`}
+      ${o?`<span class="mut"> de ${esc(o.nombre)}</span>`:""}</div><span class="badge ${w===cur?"part":t?.bolsa_entregada?"ok":"pend"}">${tag}</span></div>`}).join("");
+  return head+`<p class="sub" style="margin-top:10px">${RO()?"Tus turnos aparecen resaltados. Quien recibe esa semana no aporta.":"Captura el orden del sorteo. Los números ya usados en otra semana aparecen deshabilitados."}</p><div class="ledger">${rows}</div>`;
+}
+function vGente(){
+  const grid=Array.from({length:NW()},(_,k)=>k+1).map(n=>`<label>Número ${n}<select onchange="setOwner(${n},this.value)"><option value="">Sin asignar</option>${act().map(p=>`<option value="${p.id}" ${ownerOf(n)===p.id?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select></label>`).join("");
+  const list=act().map(p=>`<div class="row rtop"><div><b>${esc(p.nombre)}</b> <span class="mut">${esc(p.telefono||"")}</span><div class="chips">${myNums(p.id).map(n=>`<span class="chip">#${n}</span>`).join("")||'<span class="mut">Sin números</span>'}</div></div>
+    <div class="rr"><b>${fmt(COST()*myNums(p.id).length)}</b><div class="mut">por semana</div></div></div>`).join("");
+  const enc=isOwner()?`<div class="sec">Encargados con acceso</div><div class="ledger">${S.admins.map(a=>`<div class="row rtop"><div><b>${esc(a.nombre)}</b> <span class="mut">${a.rol==="dueno"?"dueño":"encargado"}</span><div class="mut">${esc(a.email)}</div></div>
+    <div class="rr">${a.rol==="dueno"?"":a.activo?`<span class="badge ok">Con acceso</span><br><button class="lnk" onclick="setActivo('${esc(a.email)}',false)">Revocar acceso</button>`:`<span class="badge late">Revocado</span><br><button class="lnk" onclick="setActivo('${esc(a.email)}',true)">Restaurar acceso</button>`}</div></div>`).join("")}</div>
+    <div class="form"><input type="text" id="nn" placeholder="Nombre" aria-label="Nombre del encargado"><input type="text" id="ne" placeholder="Correo" aria-label="Correo del encargado"><button class="btn" onclick="addEnc()">Agregar encargado</button></div>
+    <p class="mut">Además de agregarlo aquí, crea su usuario en Supabase (Authentication, Users).</p>`:"";
+  return `<div class="sec">Quién tiene cada número</div><div class="ledger"><div class="grid12">${grid}</div></div>
+    <div class="sec">Participantes</div><div class="ledger">${list||'<div class="row mut">Aún no hay participantes.</div>'}</div>
+    <div class="form"><input type="text" id="np" placeholder="Nombre del participante" aria-label="Nombre"><input type="text" id="nt" placeholder="Teléfono (opcional)" aria-label="Teléfono"><button class="btn" onclick="addP()">Agregar participante</button></div>${enc}`;
+}
+function vHist(){
+  const sym={ok:"✓",part:"◐",late:"✕",recibe:"★",pend:"·"},ws=Array.from({length:NW()},(_,k)=>k+1);
+  const head=ws.map(w=>`<th class="${w===cur?"cur":""}">${w}</th>`).join("");
+  const body=act().map(p=>{let sum=0;const c=ws.map(w=>{sum+=paid(w,p.id);const s=status(w,p.id);return `<td class="${w===cur?"cur":""} s-${s.k==="recibe"?"ok":s.k}" title="${esc(s.t)}">${sym[s.k]}</td>`}).join("");
+    return `<tr><td>${esc(p.nombre)}</td>${c}${RO()?"":`<td>${fmt(sum)}</td>`}</tr>`}).join("");
+  const tots=ws.map(w=>`<td class="${w===cur?"cur":""}">${S.pagos.filter(x=>x.semana===w).reduce((a,x)=>a+x.monto,0).toLocaleString("es-MX")}</td>`).join("");
+  return `<p class="sub">Semanas de la 1 a la ${NW()}. ✓ pagado, ◐ abono, ✕ atrasado, ★ recibe la bolsa, · pendiente.</p>
+    <div class="ledger scroll"><table><thead><tr><th>Persona</th>${head}${RO()?"":"<th>Total</th>"}</tr></thead><tbody>${body}${RO()?"":`<tr><td><b>Cobrado</b></td>${tots}<td></td></tr>`}</tbody></table></div>`;
+}
+function render(){
+  document.body.classList.toggle("ro",RO());
+  $("#ttl").textContent=S.cfg.nombre||"Tanda semanal";
+  $("#sub").textContent=`${fmt(COST())} por número, ${NW()} números, se paga el domingo y hay hasta el lunes`;
+  $("#seg").innerHTML=RO()?"":`<span>${esc(me.nombre)}, modo administrador</span><button class="out" onclick="salir()">Salir</button>`;
+  $("#note").style.display=RO()?"":"none";
+  $("#note").innerHTML=`Elige tu nombre para ver tu cuenta: <select onchange="setYo(this.value)" aria-label="¿Quién eres?"><option value="0">Elige tu nombre</option>${act().map(p=>`<option value="${p.id}" ${p.id===yo?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select>`;
+  const tabs=RO()?[["cobros","Esta semana"],["turnos","Turnos"],["hist","Historial"]]:[["cobros","Cobros"],["turnos","Turnos"],["gente","Participantes"],["hist","Historial"]];
+  if(!tabs.some(t=>t[0]===tab))tab="cobros";
+  $("#tabs").innerHTML=tabs.map(([k,t])=>`<button class="tab ${tab===k?"on":""}" onclick="setTab('${k}')">${t}</button>`).join("");
+  $("#view").innerHTML={cobros:vCobros,turnos:vTurnos,gente:vGente,hist:vHist}[tab]();
+}
+
+// Acciones del administrador (cada una pasa por las reglas de seguridad de Supabase)
+const pagar=(pid,metodo,monto,abono)=>run(sb.from("tanda_pagos").insert({semana:wk,participante_id:pid,monto,metodo,es_abono:abono,fecha_pago:iso(new Date())}),"Pago registrado");
+function openF(pid){form=form===pid?null:pid;render()}
+function saveF(pid,left){const a=Math.round(+$("#amt").value);if(!(a>0)){toast("Escribe un monto mayor a cero");return}form=null;pagar(pid,$("#met").value,Math.min(a,left),a<left)}
+function deshacer(pid){const l=pagosDe(wk,pid).slice(-1)[0];if(!l)return;run(sb.from("tanda_pagos").update({anulado:true,anulado_por:me.email,anulado_en:new Date().toISOString()}).eq("id",l.id),"Pago anulado")}
+const entregada=(w,v)=>run(sb.from("tanda_turnos").update({bolsa_entregada:v}).eq("semana",w));
+async function setTurno(w,v){
+  if(!v)return;const t=turno(w),fecha=t?.fecha||(S.cfg.fecha_inicio?plus(S.cfg.fecha_inicio,7*(w-1)):null);
+  if(!fecha){toast("Primero guarda la fecha del primer domingo");render();return}
+  run(sb.from("tanda_turnos").upsert({semana:w,numero:+v,fecha,bolsa_entregada:t?.bolsa_entregada||false},{onConflict:"semana"}),"Turno guardado");
+}
+const setFecha=(w,v)=>v&&run(sb.from("tanda_turnos").update({fecha:v}).eq("semana",w),"Fecha guardada");
+function guardarInicio(){const v=$("#ini").value;if(!v){toast("Elige una fecha");return}if(D(v).getDay()!==0)toast("Ojo: esa fecha no es domingo");run(sb.from("tanda_config").update({fecha_inicio:v}).eq("id",1),"Fecha de inicio guardada")}
+async function ajustarFechas(){
+  if(!S.cfg.fecha_inicio){toast("Primero guarda la fecha del primer domingo");return}
+  const r=await Promise.all(S.turnos.map(t=>sb.from("tanda_turnos").update({fecha:plus(S.cfg.fecha_inicio,7*(t.semana-1))}).eq("semana",t.semana)));
+  const e=r.find(x=>x.error);if(e){toast("Error: "+e.error.message);return}await load();toast("Fechas recalculadas");
+}
+const setOwner=(n,v)=>run(sb.from("tanda_numeros").update({participante_id:v?+v:null}).eq("numero",n));
+function addP(){const nombre=$("#np").value.trim();if(!nombre){toast("Escribe un nombre");return}run(sb.from("tanda_participantes").insert({nombre,telefono:$("#nt").value.trim()||null}),"Participante agregado")}
+const setActivo=(email,v)=>run(sb.from("tanda_admins").update({activo:v}).eq("email",email),v?"Acceso restaurado":"Acceso revocado");
+function addEnc(){const email=$("#ne").value.trim().toLowerCase(),nombre=$("#nn").value.trim();if(!email||!nombre){toast("Escribe nombre y correo");return}run(sb.from("tanda_admins").insert({email,nombre,rol:"encargado"}),"Encargado agregado")}
+function copyMsg(){const e=$("#msg");e.select();try{navigator.clipboard.writeText(e.value).then(()=>toast("Mensaje copiado"),()=>toast("Selecciona y copia el texto"))}catch(x){toast("Selecciona y copia el texto")}}
+
+checkAdmin();
+setInterval(()=>{if(RO()&&!document.hidden)load()},60000);
+</script>
+</body>
+</html>
