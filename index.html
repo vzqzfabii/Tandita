@@ -187,7 +187,7 @@ function vCobros(){
   const rows=act().map(p=>({p,d:due(w,p.id),pd:paid(w,p.id)}));
   const tot=rows.reduce((a,x)=>a+x.d,0),got=rows.reduce((a,x)=>a+Math.min(x.pd,x.d),0);
   const atr=act().map(p=>({p,a:atrasos(p.id)})).filter(x=>x.a.length);
-  const showList=!RO()||verTodos,av=S.avisos.filter(a=>a.estado==="pendiente");
+  const showList=true,av=S.avisos.filter(a=>a.estado==="pendiente");
   const avBox=av.length?`<div class="warnb adm" style="background:var(--warnsoft);color:var(--warn)"><b>Avisos de pago por confirmar</b>${av.map(a=>`<div style="margin-top:8px">${esc(pById(a.participante_id)?.nombre||"")} dice que pagó ${fmt(a.monto)} en ${esc(a.metodo)} (semana ${a.semana}${a.nota?", "+esc(a.nota):""})<div class="acts"><button class="btn" onclick="confirmarAviso(${a.id})">Confirmar</button><button class="btn ghost" onclick="rechazarAviso(${a.id})">No lo recibí</button></div></div>`).join("")}</div>`:"";
   const pct=tot?Math.round(got/tot*100):0,pend=rows.filter(x=>x.d>0&&x.pd<x.d);
   const ledger=rows.map(({p,d,pd})=>{
@@ -203,12 +203,12 @@ function vCobros(){
     <div class="bar"><i style="width:${pct}%"></i></div>
     <div class="stats"><div><span>Bolsa</span><b>${fmt(tot)}</b></div><div><span>Cobrado</span><b>${fmt(got)}</b></div><div><span>Falta</span><b>${fmt(tot-got)}</b></div><div><span>Por pagar</span><b>${pend.length} personas</b></div></div>
     <label class="deliv"><input type="checkbox" ${t.bolsa_entregada?"checked":""} ${RO()?"disabled":""} onchange="entregada(${w},this.checked)">${RO()?(t.bolsa_entregada?"Bolsa ya entregada":"Bolsa aún no entregada"):"Bolsa entregada a "+esc(rp.nombre)}</label></div>
-    ${avBox}${atr.length&&showList?`<div class="warnb"><b>Pagos atrasados</b><br>${atr.map(x=>"<div>"+esc(x.p.nombre)+" debe "+fmt(x.a.reduce((s,y)=>s+y.falta,0))+" ("+lista(x.a)+")"+avAt(x.p.id,x.a)+"</div>").join("")}</div>`:""}${RO()?meCard():""}${RO()?`<div class="acts"><button class="btn ghost" onclick="toggleAll()">${verTodos?"Ocultar el estado de todos":"Ver el estado de todos"}</button></div>`:""}${showList?`<div class="ledger" style="margin-top:10px">${ledger}</div>`:""}
+    ${avBox}${atr.length&&showList?`<div class="warnb"><b>Pagos atrasados</b><br>${atr.map(x=>"<div>"+esc(x.p.nombre)+" debe "+fmt(x.a.reduce((s,y)=>s+y.falta,0))+" ("+lista(x.a)+")"+avAt(x.p.id,x.a)+"</div>").join("")}</div>`:""}${RO()?meCard():""}${showList?`<div class="ledger" style="margin-top:10px">${ledger}</div>`:""}
     <div class="sec adm">Recordatorio para el grupo</div><textarea class="adm" id="msg" readonly>${esc(msg)}</textarea>
     <div class="acts adm"><button class="btn" onclick="copyMsg()">Copiar mensaje</button></div>`;
 }
 function meCard(){
-  if(!yo||!pById(yo))return `<div class="me-card"><b>Elige tu nombre arriba</b> para ver cuánto debes, cuándo recibes y avisar si ya pagaste.</div>`;
+  if(!yo||!pById(yo))return "";
   const p=pById(yo);
   const mine=myNums(yo).map(n=>{const t=S.turnos.find(x=>x.numero===n);return t?`número ${n}: semana ${t.semana}, ${fdl(t.fecha)}`:`número ${n}: turno por definir`});
   let tot=0;S.turnos.forEach(t=>{if(t.semana<=cur)tot+=paid(t.semana,yo)});
@@ -264,7 +264,7 @@ function render(){
   $("#sub").textContent=`${fmt(COST())} por número, ${NW()} números, se paga el domingo y hay hasta el lunes`;
   $("#seg").innerHTML=RO()?"":`<span>${esc(me.nombre)}, modo administrador</span><button class="out" onclick="salir()">Salir</button>`;
   $("#note").style.display=RO()?"":"none";
-  $("#note").innerHTML=`Elige tu nombre para ver tu cuenta y avisar si ya pagaste: <select onchange="setYo(this.value)" aria-label="¿Quién eres?"><option value="0">Elige tu nombre</option>${act().map(p=>`<option value="${p.id}" ${p.id===yo?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select>`;
+  $("#note").innerHTML=`<b>¿Quién eres?</b> <select onchange="setYo(this.value)" aria-label="¿Quién eres?"><option value="0">Elige tu nombre</option>${act().map(p=>`<option value="${p.id}" ${p.id===yo?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select>`;
   const tabs=RO()?[["cobros","Esta semana"],["turnos","Turnos"],["hist","Historial"]]:[["cobros","Cobros"],["turnos","Turnos"],["gente","Participantes"],["hist","Historial"]];
   if(!tabs.some(t=>t[0]===tab))tab="cobros";
   $("#tabs").innerHTML=tabs.map(([k,t])=>`<button class="tab ${tab===k?"on":""}" onclick="setTab('${k}')">${t}</button>`).join("");
