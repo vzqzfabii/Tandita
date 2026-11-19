@@ -145,7 +145,10 @@ async function load(){
   const r=await Promise.all(q),bad=r.find(x=>x.error);
   if(bad){$("#view").innerHTML=`<div class="warnb">No se pudo cargar la información: ${esc(bad.error.message)}</div>`;return}
   S.cfg=r[0].data||S.cfg;S.P=r[1].data;S.nums=r[2].data;S.turnos=r[3].data;S.pagos=r[4].data;S.avisos=r[5].data;S.admins=r[6]?.data||[];
-  const t=iso(new Date()),prev=cur;cur=1;S.turnos.forEach(x=>{if(x.fecha<=t)cur=x.semana});
+  const t=iso(new Date()),prev=cur;
+  // La semana en curso es la primera cuyo plazo (el lunes) todavía no termina; al vencer, pasa a la siguiente.
+  const sig=S.turnos.find(x=>t<plus(x.fecha,2));
+  cur=sig?sig.semana:(S.turnos.length?S.turnos[S.turnos.length-1].semana:1);
   if(!wk||wk===prev||wk>NW())wk=cur;
   render();
 }
@@ -192,7 +195,7 @@ function vCobros(){
       <div class="rr"><span class="badge ${s.k}">${s.t}</span><div class="mut">${!d?"No aporta":RO()&&!mi?"Aporta "+fmt(d):fmt(pd)+" de "+fmt(d)}</div></div></div>
       ${left&&av1&&av1.estado==="pendiente"?`<div class="pl" style="color:var(--warn);font-weight:700">Aviso de pago por confirmar</div>`:left&&av1&&av1.estado==="rechazado"?`<div class="pl" style="color:var(--bad)">Aviso no confirmado, habla con el encargado</div>`:""}${at.length?`<div class="pl" style="color:var(--bad);font-weight:700">Atrasado: debe ${fmt(at.reduce((a,x)=>a+x.falta,0))} (${lista(at)}) <button class="lnk adm" onclick="setWk(${at[0].w})">Ir a la semana ${at[0].w} para registrar el pago</button></div>`:""}${ps.length&&(!RO()||mi)?`<div class="pl">${ps.map(x=>(x.metodo?cap(x.metodo)+" ":"")+fmt(x.monto)+" ("+fd(x.fecha_pago)+(x.creado_por?", "+esc(quien(x.creado_por)):"")+")").join("; ")} <button class="lnk adm" onclick="deshacer(${p.id})">Deshacer último</button></div>`:""}
       ${left?`<div class="acts adm"><button class="btn" onclick="pagar(${p.id},'efectivo',${left},false)">Pagó ${fmt(left)} en efectivo</button><button class="btn" onclick="pagar(${p.id},'transferencia',${left},false)">Pagó ${fmt(left)} por transferencia</button><button class="btn ghost" onclick="openF(${p.id})">Otro monto o fecha</button></div>`:""}
-      ${mi&&left&&!(av1&&av1.estado==="pendiente")?`<div class="acts rof"><button class="btn" onclick="openF(${p.id})">Ya pagué</button></div>`:""}${form===p.id&&RO()?`<div class="form rof"><input type="number" id="amt2" min="1" max="${left}" value="${left}" aria-label="Monto"><select id="met2"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select><input type="text" id="nota2" maxlength="200" placeholder="Nota (opcional)" aria-label="Nota"><button class="btn" onclick="enviarAviso(${p.id},${left})">Enviar aviso</button></div>`:""}${form===p.id&&!RO()?`<div class="form adm"><input type="number" id="amt" min="1" max="${left}" value="${Math.min(left,100)}" aria-label="Monto"><select id="met"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select><input type="date" id="fp" value="${iso(new Date())}" max="${iso(new Date())}" aria-label="Fecha en que pagó"><button class="btn" onclick="saveF(${p.id},${left})">Guardar pago</button></div>`:""}
+      ${form===p.id&&!RO()?`<div class="form adm"><input type="number" id="amt" min="1" max="${left}" value="${Math.min(left,100)}" aria-label="Monto"><select id="met"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select><input type="date" id="fp" value="${iso(new Date())}" max="${iso(new Date())}" aria-label="Fecha en que pagó"><button class="btn" onclick="saveF(${p.id},${left})">Guardar pago</button></div>`:""}
     </div>`}).join("");
   const msg=`Recordatorio de la tanda, semana ${w} de ${NW()}. Pago el ${fdl(t.fecha)}, con plazo hasta el lunes ${fd(plus(t.fecha,1))}.\nFalta por pagar: ${pend.map(x=>x.p.nombre+" "+fmt(x.d-x.pd)).join(", ")||"nadie, todo al corriente"}.\nRecibe la bolsa: ${rp.nombre} (número ${rn}).`;
   return nav+`<div class="hero"><div class="who">Esta semana recibe, con el número ${rn}</div><div class="big">${esc(rp.nombre)}</div>
@@ -205,12 +208,21 @@ function vCobros(){
 }
 function meCard(){
   if(!yo||!pById(yo))return "";
-  const p=pById(yo),s=status(wk,yo),falta=Math.max(0,due(wk,yo)-paid(wk,yo));
+  const p=pById(yo);
   const mine=myNums(yo).map(n=>{const t=S.turnos.find(x=>x.numero===n);return t?`número ${n}: semana ${t.semana}, ${fdl(t.fecha)}`:`número ${n}: turno por definir`});
-  const ya=atrasos(yo);let tot=0,debt=0;S.turnos.forEach(t=>{if(t.semana<=cur){tot+=paid(t.semana,yo);debt+=Math.max(0,due(t.semana,yo)-paid(t.semana,yo))}});
-  return `<div class="me-card"><h3>Tu cuenta, ${esc(p.nombre)}</h3><p>Esta semana: <span class="badge ${s.k}">${s.t}</span> ${falta?"faltan "+fmt(falta):""}</p>
+  let tot=0;S.turnos.forEach(t=>{if(t.semana<=cur)tot+=paid(t.semana,yo)});
+  const deudas=S.turnos.filter(t=>t.semana<=cur).map(t=>({t,falta:Math.max(0,due(t.semana,yo)-paid(t.semana,yo))})).filter(x=>x.falta>0);
+  const lineas=deudas.map(({t,falta})=>{
+    const av=avisoDe(t.semana,yo),late=iso(new Date())>=plus(t.fecha,2),pend=av&&av.estado==="pendiente";
+    const accion=pend?`<span class="badge part">Aviso enviado, por confirmar</span>`:`<button class="btn" onclick="openAv(${t.semana})">Ya pagué</button>`;
+    const nota=av&&av.estado==="rechazado"?`<div class="mut" style="color:var(--bad)">Tu último aviso no se confirmó, habla con el encargado.</div>`:"";
+    const f=form===t.semana&&!pend?`<div class="form"><input type="number" id="amt2" min="1" max="${falta}" value="${falta}" aria-label="Monto"><select id="met2"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select><input type="text" id="nota2" maxlength="200" placeholder="Nota (opcional)" aria-label="Nota"><button class="btn" onclick="enviarAviso(${t.semana},${falta})">Enviar aviso</button></div>`:"";
+    return `<div class="rtop" style="margin-top:8px"><div><b>Semana ${t.semana}</b> <span class="badge ${late?"late":"pend"}">${late?"Atrasada":"Por pagar"}</span><div class="mut">Faltan ${fmt(falta)}, plazo hasta el lunes ${fd(plus(t.fecha,1))}</div>${nota}</div><div class="rr">${accion}</div></div>${f}`}).join("");
+  return `<div class="me-card"><h3>Tu cuenta, ${esc(p.nombre)}</h3>
+    <p>${deudas.length?"Esto aparece pendiente a tu nombre:":"Estás al corriente, no debes nada por ahora."}</p>${lineas}
+    ${deudas.length?`<p class="mut" style="margin-top:10px">¿Ya pagaste y todavía aparece pendiente? Toca “Ya pagué” para avisar. El administrador lo revisa y lo confirma; mientras tanto verás “por confirmar”.</p>`:""}
     <p>Cuándo recibes: ${mine.join("; ")||"aún no tienes números"}.</p>
-    <p class="mut">Has aportado ${fmt(tot)} en total${debt?" y tienes "+fmt(debt)+" pendientes":", estás al corriente"}.</p>${ya.length?`<p style="color:var(--bad);font-weight:700">Atrasado: debes ${fmt(ya.reduce((a,x)=>a+x.falta,0))} (${lista(ya)}). Ponte al corriente con el encargado.</p>`:""}</div>`;
+    <p class="mut">Has aportado ${fmt(tot)} en total.</p></div>`;
 }
 function vTurnos(){
   const used={};S.turnos.forEach(t=>used[t.numero]=t.semana);
@@ -251,7 +263,7 @@ function render(){
   $("#sub").textContent=`${fmt(COST())} por número, ${NW()} números, se paga el domingo y hay hasta el lunes`;
   $("#seg").innerHTML=RO()?"":`<span>${esc(me.nombre)}, modo administrador</span><button class="out" onclick="salir()">Salir</button>`;
   $("#note").style.display=RO()?"":"none";
-  $("#note").innerHTML=`Elige tu nombre para ver tu cuenta: <select onchange="setYo(this.value)" aria-label="¿Quién eres?"><option value="0">Elige tu nombre</option>${act().map(p=>`<option value="${p.id}" ${p.id===yo?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select>`;
+  $("#note").innerHTML=`Elige tu nombre para ver tu cuenta y avisar si ya pagaste: <select onchange="setYo(this.value)" aria-label="¿Quién eres?"><option value="0">Elige tu nombre</option>${act().map(p=>`<option value="${p.id}" ${p.id===yo?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select>`;
   const tabs=RO()?[["cobros","Esta semana"],["turnos","Turnos"],["hist","Historial"]]:[["cobros","Cobros"],["turnos","Turnos"],["gente","Participantes"],["hist","Historial"]];
   if(!tabs.some(t=>t[0]===tab))tab="cobros";
   $("#tabs").innerHTML=tabs.map(([k,t])=>`<button class="tab ${tab===k?"on":""}" onclick="setTab('${k}')">${t}</button>`).join("");
@@ -260,6 +272,7 @@ function render(){
 
 // Acciones del administrador (cada una pasa por las reglas de seguridad de Supabase)
 const pagar=(pid,metodo,monto,abono,fecha)=>run(sb.from("tanda_pagos").insert({semana:wk,participante_id:pid,monto,metodo,es_abono:abono,fecha_pago:fecha||iso(new Date())}),"Pago registrado");
+function openAv(w){form=form===w?null:w;render()}
 function openF(pid){form=form===pid?null:pid;render()}
 function saveF(pid,left){const a=Math.round(+$("#amt").value);if(!(a>0)){toast("Escribe un monto mayor a cero");return}const f=$("#fp").value||iso(new Date());form=null;pagar(pid,$("#met").value,Math.min(a,left),a<left,f)}
 function deshacer(pid){const l=pagosDe(wk,pid).slice(-1)[0];if(!l)return;run(sb.from("tanda_pagos").update({anulado:true,anulado_por:me.email,anulado_en:new Date().toISOString()}).eq("id",l.id),"Pago anulado")}
@@ -280,9 +293,9 @@ const setOwner=(n,v)=>run(sb.from("tanda_numeros").update({participante_id:v?+v:
 function addP(){const nombre=$("#np").value.trim();if(!nombre){toast("Escribe un nombre");return}run(sb.from("tanda_participantes").insert({nombre,telefono:$("#nt").value.trim()||null}),"Participante agregado")}
 const setActivo=(email,v)=>run(sb.from("tanda_admins").update({activo:v}).eq("email",email),v?"Acceso restaurado":"Acceso revocado");
 function addEnc(){const email=$("#ne").value.trim().toLowerCase(),nombre=$("#nn").value.trim();if(!email||!nombre){toast("Escribe nombre y correo");return}run(sb.from("tanda_admins").insert({email,nombre,rol:"encargado"}),"Encargado agregado")}
-async function enviarAviso(pid,left){
+async function enviarAviso(w,left){
   const a=Math.round(+$("#amt2").value);if(!(a>0)){toast("Escribe un monto mayor a cero");return}
-  const{error}=await sb.from("tanda_avisos").insert({semana:wk,participante_id:pid,monto:Math.min(a,left),metodo:$("#met2").value,nota:$("#nota2").value.trim()||null,fecha_aviso:iso(new Date())});
+  const{error}=await sb.from("tanda_avisos").insert({semana:w,participante_id:yo,monto:Math.min(a,left),metodo:$("#met2").value,nota:$("#nota2").value.trim()||null,fecha_aviso:iso(new Date())});
   if(error){toast(error.code==="23505"?"Ya hay un aviso pendiente para esta semana":"No se pudo enviar el aviso");return}
   form=null;await load();toast("Aviso enviado, el administrador lo confirmará");
 }
