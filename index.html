@@ -104,7 +104,7 @@ const fdl=s=>D(s).toLocaleDateString("es-MX",{weekday:"long",day:"numeric",month
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 
 let S={cfg:{nombre:"Tanda semanal",monto_por_numero:300,total_numeros:12,fecha_inicio:null},P:[],nums:[],turnos:[],pagos:[],avisos:[],admins:[]};
-let me=null,tab="cobros",wk=0,cur=1,form=null,yo=0;
+let me=null,tab="cobros",wk=0,cur=1,form=null,yo=0,verTodos=false;
 try{yo=+localStorage.getItem("tanda_yo")||0}catch(e){}
 const RO=()=>!me,isOwner=()=>me&&me.rol==="dueno";
 const act=()=>S.P.filter(p=>p.activo),pById=id=>S.P.find(p=>p.id===id);
@@ -117,6 +117,7 @@ const pagosDe=(w,pid)=>S.pagos.filter(x=>x.semana===w&&x.participante_id===pid);
 const paid=(w,pid)=>pagosDe(w,pid).reduce((a,x)=>a+x.monto,0);
 const atrasos=pid=>S.turnos.filter(t=>iso(new Date())>=plus(t.fecha,2)).map(t=>({w:t.semana,falta:Math.max(0,due(t.semana,pid)-paid(t.semana,pid))})).filter(x=>x.falta>0);
 const avisoDe=(w,pid)=>S.avisos.filter(a=>a.semana===w&&a.participante_id===pid).slice(-1)[0];
+const avAt=(pid,list)=>{const ws=S.avisos.filter(a=>a.participante_id===pid&&a.estado==="pendiente"&&list.some(x=>x.w===a.semana)).map(a=>a.semana);return ws.length?`<div class="mut" style="color:var(--warn)">Ya avisó que pagó la semana ${ws.join(", ")}; el encargado aún no lo aprueba</div>`:""};
 const lista=a=>a.map(x=>"semana "+x.w).join(", ");
 const quien=email=>S.admins.find(a=>a.email===email)?.nombre||"administrador";
 function status(w,pid){
@@ -186,14 +187,14 @@ function vCobros(){
   const rows=act().map(p=>({p,d:due(w,p.id),pd:paid(w,p.id)}));
   const tot=rows.reduce((a,x)=>a+x.d,0),got=rows.reduce((a,x)=>a+Math.min(x.pd,x.d),0);
   const atr=act().map(p=>({p,a:atrasos(p.id)})).filter(x=>x.a.length);
-  const av=S.avisos.filter(a=>a.estado==="pendiente");
+  const showList=!RO()||verTodos,av=S.avisos.filter(a=>a.estado==="pendiente");
   const avBox=av.length?`<div class="warnb adm" style="background:var(--warnsoft);color:var(--warn)"><b>Avisos de pago por confirmar</b>${av.map(a=>`<div style="margin-top:8px">${esc(pById(a.participante_id)?.nombre||"")} dice que pagó ${fmt(a.monto)} en ${esc(a.metodo)} (semana ${a.semana}${a.nota?", "+esc(a.nota):""})<div class="acts"><button class="btn" onclick="confirmarAviso(${a.id})">Confirmar</button><button class="btn ghost" onclick="rechazarAviso(${a.id})">No lo recibí</button></div></div>`).join("")}</div>`:"";
   const pct=tot?Math.round(got/tot*100):0,pend=rows.filter(x=>x.d>0&&x.pd<x.d);
   const ledger=rows.map(({p,d,pd})=>{
     const s=status(w,p.id),left=Math.max(d-pd,0),ps=pagosDe(w,p.id),mi=RO()&&p.id===yo,at=atrasos(p.id).filter(x=>x.w!==w),av1=avisoDe(w,p.id);
     return `<div class="row ${mi?"mine":""}"><div class="rtop"><div><b>${esc(p.nombre)}${mi?" (tú)":""}</b><div class="chips">${numChips(p.id,w)}</div></div>
       <div class="rr"><span class="badge ${s.k}">${s.t}</span><div class="mut">${!d?"No aporta":RO()&&!mi?"Aporta "+fmt(d):fmt(pd)+" de "+fmt(d)}</div></div></div>
-      ${left&&av1&&av1.estado==="pendiente"?`<div class="pl" style="color:var(--warn);font-weight:700">Aviso de pago por confirmar</div>`:left&&av1&&av1.estado==="rechazado"?`<div class="pl" style="color:var(--bad)">Aviso no confirmado, habla con el encargado</div>`:""}${at.length?`<div class="pl" style="color:var(--bad);font-weight:700">Atrasado: debe ${fmt(at.reduce((a,x)=>a+x.falta,0))} (${lista(at)}) <button class="lnk adm" onclick="setWk(${at[0].w})">Ir a la semana ${at[0].w} para registrar el pago</button></div>`:""}${ps.length&&(!RO()||mi)?`<div class="pl">${ps.map(x=>(x.metodo?cap(x.metodo)+" ":"")+fmt(x.monto)+" ("+fd(x.fecha_pago)+(x.creado_por?", "+esc(quien(x.creado_por)):"")+")").join("; ")} <button class="lnk adm" onclick="deshacer(${p.id})">Deshacer último</button></div>`:""}
+      ${left&&av1&&av1.estado==="pendiente"?`<div class="pl" style="color:var(--warn);font-weight:700">Ya avisó que pagó, el encargado aún no lo aprueba</div>`:left&&av1&&av1.estado==="rechazado"?`<div class="pl" style="color:var(--bad)">Aviso no confirmado, habla con el encargado</div>`:""}${at.length?`<div class="pl" style="color:var(--bad);font-weight:700">Atrasado: debe ${fmt(at.reduce((a,x)=>a+x.falta,0))} (${lista(at)}) <button class="lnk adm" onclick="setWk(${at[0].w})">Ir a la semana ${at[0].w} para registrar el pago</button></div>${avAt(p.id,at)}`:""}${ps.length&&(!RO()||mi)?`<div class="pl">${ps.map(x=>(x.metodo?cap(x.metodo)+" ":"")+fmt(x.monto)+" ("+fd(x.fecha_pago)+(x.creado_por?", "+esc(quien(x.creado_por)):"")+")").join("; ")} <button class="lnk adm" onclick="deshacer(${p.id})">Deshacer último</button></div>`:""}
       ${left?`<div class="acts adm"><button class="btn" onclick="pagar(${p.id},'efectivo',${left},false)">Pagó ${fmt(left)} en efectivo</button><button class="btn" onclick="pagar(${p.id},'transferencia',${left},false)">Pagó ${fmt(left)} por transferencia</button><button class="btn ghost" onclick="openF(${p.id})">Otro monto o fecha</button></div>`:""}
       ${form===p.id&&!RO()?`<div class="form adm"><input type="number" id="amt" min="1" max="${left}" value="${Math.min(left,100)}" aria-label="Monto"><select id="met"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option></select><input type="date" id="fp" value="${iso(new Date())}" max="${iso(new Date())}" aria-label="Fecha en que pagó"><button class="btn" onclick="saveF(${p.id},${left})">Guardar pago</button></div>`:""}
     </div>`}).join("");
@@ -202,12 +203,12 @@ function vCobros(){
     <div class="bar"><i style="width:${pct}%"></i></div>
     <div class="stats"><div><span>Bolsa</span><b>${fmt(tot)}</b></div><div><span>Cobrado</span><b>${fmt(got)}</b></div><div><span>Falta</span><b>${fmt(tot-got)}</b></div><div><span>Por pagar</span><b>${pend.length} personas</b></div></div>
     <label class="deliv"><input type="checkbox" ${t.bolsa_entregada?"checked":""} ${RO()?"disabled":""} onchange="entregada(${w},this.checked)">${RO()?(t.bolsa_entregada?"Bolsa ya entregada":"Bolsa aún no entregada"):"Bolsa entregada a "+esc(rp.nombre)}</label></div>
-    ${avBox}${atr.length?`<div class="warnb"><b>Pagos atrasados</b><br>${atr.map(x=>esc(x.p.nombre)+" debe "+fmt(x.a.reduce((s,y)=>s+y.falta,0))+" ("+lista(x.a)+")").join("<br>")}</div>`:""}${RO()?meCard():""}<div class="ledger">${ledger}</div>
+    ${avBox}${atr.length&&showList?`<div class="warnb"><b>Pagos atrasados</b><br>${atr.map(x=>"<div>"+esc(x.p.nombre)+" debe "+fmt(x.a.reduce((s,y)=>s+y.falta,0))+" ("+lista(x.a)+")"+avAt(x.p.id,x.a)+"</div>").join("")}</div>`:""}${RO()?meCard():""}${RO()?`<div class="acts"><button class="btn ghost" onclick="toggleAll()">${verTodos?"Ocultar el estado de todos":"Ver el estado de todos"}</button></div>`:""}${showList?`<div class="ledger" style="margin-top:10px">${ledger}</div>`:""}
     <div class="sec adm">Recordatorio para el grupo</div><textarea class="adm" id="msg" readonly>${esc(msg)}</textarea>
     <div class="acts adm"><button class="btn" onclick="copyMsg()">Copiar mensaje</button></div>`;
 }
 function meCard(){
-  if(!yo||!pById(yo))return "";
+  if(!yo||!pById(yo))return `<div class="me-card"><b>Elige tu nombre arriba</b> para ver cuánto debes, cuándo recibes y avisar si ya pagaste.</div>`;
   const p=pById(yo);
   const mine=myNums(yo).map(n=>{const t=S.turnos.find(x=>x.numero===n);return t?`número ${n}: semana ${t.semana}, ${fdl(t.fecha)}`:`número ${n}: turno por definir`});
   let tot=0;S.turnos.forEach(t=>{if(t.semana<=cur)tot+=paid(t.semana,yo)});
@@ -272,6 +273,7 @@ function render(){
 
 // Acciones del administrador (cada una pasa por las reglas de seguridad de Supabase)
 const pagar=(pid,metodo,monto,abono,fecha)=>run(sb.from("tanda_pagos").insert({semana:wk,participante_id:pid,monto,metodo,es_abono:abono,fecha_pago:fecha||iso(new Date())}),"Pago registrado");
+function toggleAll(){verTodos=!verTodos;render()}
 function openAv(w){form=form===w?null:w;render()}
 function openF(pid){form=form===pid?null:pid;render()}
 function saveF(pid,left){const a=Math.round(+$("#amt").value);if(!(a>0)){toast("Escribe un monto mayor a cero");return}const f=$("#fp").value||iso(new Date());form=null;pagar(pid,$("#met").value,Math.min(a,left),a<left,f)}
